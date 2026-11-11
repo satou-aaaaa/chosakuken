@@ -582,6 +582,7 @@ function play() {
   const tag = run.list[i], P = G.make(tag), hard = run.mode === "h";
   const saved = run.cur && run.cur.i === i && run.cur.tag === tag ? run.cur : { wrong: [], hints: 0 };
   cur = { i, date: run.date, id: run.id, tag, P, wrong: (saved.wrong || []).filter((w) => w >= 0 && w < P.opts.length && w !== P.ans), hints: hard ? 0 : saved.hints || 0, done: false };
+  if (run.mode === "e") keep(); // とことんは開いた問題の番号も保存する（別のタブの古い画面で「ここで降りる」を押しても終えないように）
   const kind = ({ saku: "著作物", shi: "コピー", in: "引用・学校", net: "ネット", jin: "作者の権利" })[P.cat];
   const label = run.mode === "d" ? `今日の5問・${kind}` : run.mode === "a" ? `あとから・${kind}` : hard ? `上級・${kind}` : run.mode === "e" ? `とことん・${kind}` : `練習・${kind}`;
   const cls = P.opts.length === 2 ? " two" : "";
