@@ -87,7 +87,7 @@ check("違法なダウンロード・アップロードを勧めない（「違�
 check("チケット・回数制限・🔒で開くモードを入れない（好きなだけ遊べる）", !/🎫|チケット|🔒|すると開く|あとで開く|スタミナ|回復まで/.test(html));
 check("画面にお笑いの言葉を入れない（本物っぽく）", !/お笑い|ギャグ|ツッコミ|なんでやねん|（うそ）|ｗｗ/.test(html + data));
 check("実在の会社名・人名・ブランドを出さない（人物は名字＋年代だけ）", !/株式会社|有限会社|Amazon|楽天|メルカリ|LINEヤフー/.test(data));
-check("引き継ぎ：transfer.js をゲームの script より前に、このゲームの記録のキーだけで読む", /<script src="transfer\.js" data-game="chosakuken" data-keys="chosakuken-v1"><\/script>\s*<\/head>/.test(html) && html.indexOf('src="transfer.js"') < html.indexOf('src="data.js"') && /data-hk/.test(html) && existsSync(path.join(root, "transfer.js")));
+check("引き継ぎ：transfer.js をゲームの script より前に、このゲームの記録のキーだけで読む", /<script src="transfer\.js" data-game="chosakuken" data-keys="chosaku-v1"><\/script>\s*<\/head>/.test(html) && html.indexOf('src="transfer.js"') < html.indexOf('src="data.js"') && /data-hk/.test(html) && existsSync(path.join(root, "transfer.js")));
 { const og = (k) => (html.match(new RegExp(`<meta (?:property|name)="${k}" content="([^"]+)"`)) || [])[1] || "";
   const png = readFileSync(path.join(root, "og.png"));
   check("SNS で貼ると絵と題が出る（OGP・1200×630・絶対URL）", og("og:title") && og("og:description") && og("og:image") === "https://satou-aaaaa.github.io/chosakuken/og.png" && og("twitter:card") === "summary_large_image" && png.readUInt32BE(16) === 1200 && png.readUInt32BE(20) === 630); }
@@ -127,7 +127,7 @@ async function newPage(w = 390, ctx) {
 const closeHow = async (p) => { if (await p.locator("#howto[open]").count()) await p.click("#howto-ok"); };
 const ansIdx = (p) => p.evaluate(() => __mb.cur().P.ans);
 const wrongIdx = (p) => p.evaluate(() => { const c = __mb.cur(); return c.P.opts.findIndex((_, j) => j !== c.P.ans && !c.wrong.includes(j)); });
-const mem = (p) => p.evaluate(() => JSON.parse(localStorage.getItem("chosakuken-v1") || "{}"));
+const mem = (p) => p.evaluate(() => JSON.parse(localStorage.getItem("chosaku-v1") || "{}"));
 async function solve(p, { wrong = 0 } = {}) {
   for (let i = 0; i < wrong; i++) await p.click(`.ch[data-j="${await wrongIdx(p)}"]`);
   await p.click(`.ch[data-j="${await ansIdx(p)}"]`);
@@ -147,11 +147,11 @@ try {
   {
     // cancel（Esc）のその場で保存する。close を待たずに見る。保存に失敗したら close でもう一度保存する（CodeRabbit の指摘）
     const q = await newPage();
-    const atCancel = await q.evaluate(() => { const d = document.getElementById("howto"); d.dispatchEvent(new Event("cancel")); return JSON.parse(localStorage.getItem("chosakuken-v1") || "{}").tut === true; });
+    const atCancel = await q.evaluate(() => { const d = document.getElementById("howto"); d.dispatchEvent(new Event("cancel")); return JSON.parse(localStorage.getItem("chosaku-v1") || "{}").tut === true; });
     check("遊び方を Esc で閉じたその場（close の前）に「見た」を保存する", atCancel);
     await q.context().close();
     const q2 = await newPage();
-    const retried = await q2.evaluate(() => { const ls = Storage.prototype.setItem; Storage.prototype.setItem = function () { throw new Error("full"); }; const d = document.getElementById("howto"); d.dispatchEvent(new Event("cancel")); Storage.prototype.setItem = ls; const before = JSON.parse(localStorage.getItem("chosakuken-v1") || "{}").tut === true; d.close(); return new Promise((res) => setTimeout(() => res(!before && JSON.parse(localStorage.getItem("chosakuken-v1") || "{}").tut === true), 100)); });
+    const retried = await q2.evaluate(() => { const ls = Storage.prototype.setItem; Storage.prototype.setItem = function () { throw new Error("full"); }; const d = document.getElementById("howto"); d.dispatchEvent(new Event("cancel")); Storage.prototype.setItem = ls; const before = JSON.parse(localStorage.getItem("chosaku-v1") || "{}").tut === true; d.close(); return new Promise((res) => setTimeout(() => res(!before && JSON.parse(localStorage.getItem("chosaku-v1") || "{}").tut === true), 100)); });
     check("Esc のときの保存に失敗しても、閉じたときに「見た」を保存し直す", retried);
     await q2.context().close();
   }
@@ -273,7 +273,7 @@ try {
   {
     // 古いタブで終えた回を、別のタブがもう一度終えても書き戻さない
     const q = await newPage(); await closeHow(q);
-    await q.evaluate(() => { const s = __mb.load(); s.ebest = 2; s.edone = ["old1"]; s.runs.e = { mode: "e", date: __mb.todayKey(), list: __mb.endlessList(), res: [{ m: 0 }], cur: null, first: 9, miss: 0, id: "old1" }; localStorage.setItem("chosakuken-v1", JSON.stringify(s)); });
+    await q.evaluate(() => { const s = __mb.load(); s.ebest = 2; s.edone = ["old1"]; s.runs.e = { mode: "e", date: __mb.todayKey(), list: __mb.endlessList(), res: [{ m: 0 }], cur: null, first: 9, miss: 0, id: "old1" }; localStorage.setItem("chosaku-v1", JSON.stringify(s)); });
     await q.reload(); await q.waitForTimeout(150); await q.click("#go-e"); await q.click("#quit"); await q.waitForTimeout(150);
     check("別のタブで終えたとことんの回は、自己ベストに書き戻さない", (await mem(q)).ebest === 2);
     await q.context().close();
@@ -281,7 +281,7 @@ try {
   {
     // 記録の形を直す：数の所の文字・壊れた途中経過・札を HTML として出さない
     const q = await newPage(); await closeHow(q);
-    await q.evaluate(() => { const s = JSON.parse(localStorage.getItem("chosakuken-v1")) || { v: 1 }; s.ebest = '<img id="xss" src=x>'; s.dex = { jijitsu: '"><b id="xss2">', zzz: 3 }; s.miss = ['"><i id="xss3">', "q:jijitsu"]; s.runs = { e: { mode: "e", id: "x", date: "2026-11-07", list: ['<b id="xss4">'], res: [] }, h: { list: "bad", res: [] }, d: { mode: "d", id: "z", date: "x", list: ["q:jijitsu"], res: [] }, p: { mode: "p", id: "y", date: "2026-11-07", list: ["q:jijitsu", "q:idea"], res: [{ m: 0 }], cur: { i: 1, tag: "q:idea", wrong: "x", hints: 0 } } }; s.days = { "2026-11-07": { m: "x" }, bad: { m: [0] }, "2026-02-30": { m: [0] } }; localStorage.setItem("chosakuken-v1", JSON.stringify(s)); });
+    await q.evaluate(() => { const s = JSON.parse(localStorage.getItem("chosaku-v1")) || { v: 1 }; s.ebest = '<img id="xss" src=x>'; s.dex = { jijitsu: '"><b id="xss2">', zzz: 3 }; s.miss = ['"><i id="xss3">', "q:jijitsu"]; s.runs = { e: { mode: "e", id: "x", date: "2026-11-07", list: ['<b id="xss4">'], res: [] }, h: { list: "bad", res: [] }, d: { mode: "d", id: "z", date: "x", list: ["q:jijitsu"], res: [] }, p: { mode: "p", id: "y", date: "2026-11-07", list: ["q:jijitsu", "q:idea"], res: [{ m: 0 }], cur: { i: 1, tag: "q:idea", wrong: "x", hints: 0 } } }; s.days = { "2026-11-07": { m: "x" }, bad: { m: [0] }, "2026-02-30": { m: [0] } }; localStorage.setItem("chosaku-v1", JSON.stringify(s)); });
     await q.reload(); await q.waitForTimeout(250);
     const st = await q.evaluate(() => __mb.load());
     check("記録の形を直す：数の所の文字は0に・知らない場面と壊れた途中経過・日ごとの記録は捨てる", st.ebest === 0 && st.dex.jijitsu === 0 && !("zzz" in st.dex) && JSON.stringify(st.miss) === '["q:jijitsu"]' && !("e" in st.runs) && !("h" in st.runs) && !("d" in st.runs) && st.runs.p && st.runs.p.cur === null && Object.keys(st.days).length === 0);
@@ -293,7 +293,7 @@ try {
     // 引き継ぎで入った記録：件数の合わない日の記録・置き場とモードが合わない途中経過・終えたとことんの回は捨てる
     const q = await newPage(); await closeHow(q);
     const d1 = dayBefore(1), d2 = dayBefore(2), lt = G.dailyTags(d2);
-    await q.evaluate(([d1, d2, lt]) => { localStorage.setItem("chosakuken-v1", JSON.stringify({ v: 1, tut: true, days: { [d1]: { m: [0] }, [d2]: { m: [0, 0, 0, 0, 0], l: lt } }, hdays: { [d1]: { m: [0, 0, 0] }, [d2]: { m: [0, 0, 0, 0, 0] } }, adays: {}, dex: {}, miss: [], kofi: {}, ach: {}, ebest: 0, edone: ["E1"],
+    await q.evaluate(([d1, d2, lt]) => { localStorage.setItem("chosaku-v1", JSON.stringify({ v: 1, tut: true, days: { [d1]: { m: [0] }, [d2]: { m: [0, 0, 0, 0, 0], l: lt } }, hdays: { [d1]: { m: [0, 0, 0] }, [d2]: { m: [0, 0, 0, 0, 0] } }, adays: {}, dex: {}, miss: [], kofi: {}, ach: {}, ebest: 0, edone: ["E1"],
       runs: { d: { id: "x", date: d1, list: ["q:jijitsu"], res: [] }, ["a:" + d2]: { mode: "a", id: "y", date: d1, list: ["q:jijitsu"], res: [] }, e: { mode: "e", id: "E1", date: d1, list: ["q:jijitsu"], res: [] }, h: { mode: "d", id: "z", date: d1, list: ["q:jijitsu"], res: [] } } })); }, [d1, d2, lt]);
     await q.reload(); await q.waitForTimeout(200);
     const st = await q.evaluate(() => __mb.load());
@@ -338,7 +338,7 @@ try {
   // カレンダー・あとから：過去の日の記録を置いて見る
   {
     const q = await newPage();
-    await q.evaluate(([d2, d3]) => { localStorage.setItem("chosakuken-v1", JSON.stringify({ v: 1, tut: true, days: { [d2]: { m: [0, 0, 0, 0, 0] }, [d3]: { m: [1, 0, 0, 2, 0] } }, hdays: {}, adays: {}, dex: {}, miss: [], runs: {}, kofi: {}, ach: {}, ebest: 0, edone: [] })); }, [dayBefore(2), dayBefore(3)]);
+    await q.evaluate(([d2, d3]) => { localStorage.setItem("chosaku-v1", JSON.stringify({ v: 1, tut: true, days: { [d2]: { m: [0, 0, 0, 0, 0] }, [d3]: { m: [1, 0, 0, 2, 0] } }, hdays: {}, adays: {}, dex: {}, miss: [], runs: {}, kofi: {}, ach: {}, ebest: 0, edone: [] })); }, [dayBefore(2), dayBefore(3)]);
     await q.reload(); await q.waitForTimeout(150);
     check("ホームの「続けて」は、きのうを休んだら — （休んだ日を責めない）", (await q.textContent(".stats")).includes("—"));
     await q.click("#go-cal");
@@ -437,7 +437,7 @@ try {
 
 // 引き継ぎコード（shared-workflows template/qa/transfer-check.mjs）
 try {
-  const sample = { "chosakuken-v1": JSON.stringify({ v: 1, tut: true, days: { "2026-11-07": { m: [0, 1, 0, 0, 2] } }, hdays: {}, adays: {}, dex: { jijitsu: 2, idea: 1 }, miss: ["q:jijitsu"], runs: {}, kofi: {}, ach: {}, ebest: 7, edone: [], t: 1 }) };
+  const sample = { "chosaku-v1": JSON.stringify({ v: 1, tut: true, days: { "2026-11-07": { m: [0, 1, 0, 0, 2] } }, hdays: {}, adays: {}, dex: { jijitsu: 2, idea: 1 }, miss: ["q:jijitsu"], runs: {}, kofi: {}, ach: {}, ebest: 7, edone: [], t: 1 }) };
   await checkTransfer({ browser, url, game: "chosakuken", sample, check, open: async (pg) => { if (await pg.locator("#howto[open]").count()) await pg.click("#howto-ok"); } });
 } catch (e) { check("引き継ぎの検査が最後まで動く", false, e.message.split("\n")[0]); }
 await browser.close();
