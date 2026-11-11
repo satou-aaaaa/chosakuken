@@ -603,7 +603,7 @@ function play() {
   $("back").onclick = home;
   document.querySelectorAll(".ch").forEach((b) => (b.onclick = () => choose(+b.dataset.j)));
   if ($("hint")) $("hint").onclick = hint;
-  if ($("quit")) $("quit").onclick = finish; // 正解した直後も降りられる（答えた問題は保存済み）
+  if ($("quit")) $("quit").onclick = () => { const r = load().runs[MODE]; if (!r || !cur || r.id !== cur.id) { toast("別の画面で先に進んでいます"); return home(); } finish(); }; // 正解した直後も降りられる（答えた問題は保存済み）。別のタブで始めた新しい回は終えない（回の id で見る）
   paint();
   toTop();
 }

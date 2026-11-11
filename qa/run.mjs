@@ -361,6 +361,21 @@ try {
     await q.context().close();
   }
 
+  // 古いタブ：とことんを2つのタブで開き、片方で降りて新しい回を始めたら、古いタブの「ここで降りる」は新しい回を終えず、自己ベストも書き戻さない
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 800 } });
+    const a = await newPage(390, ctx); await closeHow(a); await a.click("#go-e"); await solve(a);
+    const b = await ctx.newPage(); b.on("pageerror", (e) => errors.push(e.message)); await b.goto(url); await b.waitForTimeout(150); await b.click("#go-e");
+    await b.click("#quit"); await b.waitForTimeout(150);
+    const best = (await mem(b)).ebest;
+    await b.click("#go-e"); await b.waitForTimeout(150);
+    const newId = (await mem(b)).runs.e?.id;
+    await a.click("#quit"); await a.waitForTimeout(150);
+    const s = await mem(a);
+    check("古いタブの「ここで降りる」は、別のタブで始めた新しい回を終えず、自己ベストも書き戻さない", !!newId && s.runs.e?.id === newId && s.ebest === best && best === 1, `${newId}/${s.runs.e?.id}/${best}/${s.ebest}`);
+    await ctx.close();
+  }
+
   // 古いタブ：同じ問題を2つのタブで開き、片方で答えたら、もう片方は二重に入れない
   {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 800 } });
