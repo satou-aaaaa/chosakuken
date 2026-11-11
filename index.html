@@ -25,7 +25,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <style>
-/* 投票所の記載台：白い紙に藍の字、朱の「投票」の判。 */
+/* 白い紙に藍の字、朱の「著作」の判。 */
 :root{
   --bg:#eceff3; --paper:#ffffff; --ink:#1b2433; --ink2:#4a5566; --line:#1b243326;
   --mo:#1f4a7a; --mo2:#12304f; --shu:#b23a24; --shu2:#7f2414; --ok:#1f6b45; --ok2:#134a2f; --gold:#8f6510; --sky:#e6edf6;
@@ -51,7 +51,7 @@ button.sub:disabled,button.main:disabled{opacity:.45;cursor:default}
 .note{color:var(--ink2);font-size:.85rem;line-height:1.7;margin:0;text-align:center}
 .note a,.about a,.tecard a{color:var(--shu2);display:inline-flex;align-items:center;min-height:44px}
 .big{font-weight:900;font-size:1.45rem;text-align:center;margin:0;line-height:1.35}
-.title{font-weight:900;font-size:2rem;letter-spacing:.1em;text-align:center;margin:6px 0 0;color:var(--mo2);line-height:1.25}
+.title{flex:none;font-weight:900;font-size:2rem;letter-spacing:.1em;text-align:center;margin:6px 0 0;color:var(--mo2);line-height:1.25}
 .title span{color:var(--shu)}
 .title small{display:block;font-size:.8rem;letter-spacing:.3em;color:var(--ink2);font-weight:700}
 .lead{text-align:center;color:var(--ink2);margin:0;font-size:.92rem;line-height:1.7}
@@ -372,7 +372,7 @@ function practiceList(cat) {
   return shuffled(G.pool(cat || "all")).slice(0, 5);
 }
 const starsOf = (m) => (m === 0 ? 3 : m === 1 ? 2 : 1); // m = まちがい＋ヒントの数
-const starStr = (s) => `<span class="stars" aria-label="星${s}つ">${"★".repeat(s)}<span class="off">${"☆".repeat(3 - s)}</span></span>`;
+const starStr = (s) => `<span class="stars" role="img" aria-label="星${s}つ">${"★".repeat(s)}<span class="off" aria-hidden="true">${"☆".repeat(3 - s)}</span></span>`;
 
 // ---- 記録（この端末の localStorage だけ）----
 // days/hdays/adays：日付 → { m:[1問ごとのまちがい＋ヒント] }。adays はあとから遊んだ日（連続の日・今日の記録・Ko-fi には数えない）
@@ -440,7 +440,8 @@ function tidy(s) {
   return s;
 }
 // 保存の前に読み直す（別のタブで進めた記録を消さない）
-function save(fn) { const s = load(); fn(s); s.t = Math.max(Date.now(), (s.t || 0) + 1); const j = JSON.stringify(s); try { localStorage.setItem(KEY, j); mem = null; } catch (e) { mem = j; } return s; }
+function saveWarn(on) { let b = document.getElementById("savewarn"); const l = document.getElementById("live"), W = "この端末に記録を保存できませんでした。ページを開き直すと、いまの記録が消えます"; if (!on) { if (b) { b.remove(); if (saveWarn.o) saveWarn.o.disconnect(); if (l && l.textContent.includes(W)) l.textContent = l.textContent.replace(W, "").replace(/^[。\s]+|[。\s]+$/g, ""); } return; } if (b) return; b = document.createElement("div"); b.id = "savewarn"; b.setAttribute("role", "status"); b.textContent = W; b.style.cssText = "position:sticky;top:0;z-index:9999;padding:8px 12px;background:#fff3cd;color:#000;font-size:15px;line-height:1.5;text-align:center;pointer-events:none;border-bottom:2px solid #8a6d00"; (document.body || document.documentElement).prepend(b); if (l) { l.textContent = W; if (window.MutationObserver) { saveWarn.o = new MutationObserver(() => { if (document.getElementById("savewarn") && l.textContent && !l.textContent.includes(W)) l.textContent += "。" + W; }); saveWarn.o.observe(l, { childList: true, characterData: true, subtree: true }); } } } // 帯は画面のいちばん上に場所を取り（ボタンに重ならない）、#live でも読み上げる。ほかの知らせで #live が書き換わっても、保存できないあいだは警告を後ろに付け直す。保存できたら帯と #live の警告を消す（黙って記録が消えないように・古い警告を読み上げないように）
+function save(fn) { const s = load(); fn(s); s.t = Math.max(Date.now(), (s.t || 0) + 1); const j = JSON.stringify(s); try { localStorage.setItem(KEY, j); mem = null; saveWarn(false); } catch (e) { mem = j; saveWarn(true); } return s; }
 function streak(days) { let k = todayKey(), n = 0; if (!days[k]) k = prevDay(k); while (days[k]) { n++; k = prevDay(k); } return n; }
 const playedDays = (s) => new Set([...Object.keys(s.days), ...Object.keys(s.adays)]).size;
 const seenAll = (s) => Object.values(s.dex).reduce((a, b) => a + (+b || 0), 0);
@@ -602,14 +603,14 @@ function play() {
   $("back").onclick = home;
   document.querySelectorAll(".ch").forEach((b) => (b.onclick = () => choose(+b.dataset.j)));
   if ($("hint")) $("hint").onclick = hint;
-  if ($("quit")) $("quit").onclick = () => { if (cur && cur.done) return; finish(); };
+  if ($("quit")) $("quit").onclick = finish; // 正解した直後も降りられる（答えた問題は保存済み）
   paint();
   toTop();
 }
 // ヒント2：まちがいの選び肢を1つ消す（消す順は選び肢の並びの順）
 // 2回目のヒントは、消せるまちがいの選び肢が2つ以上あるときだけ（二択では1回まで）
 const hmax = () => (cur.hints >= 2 || cur.P.opts.filter((_, j) => j !== cur.P.ans && !cur.wrong.includes(j)).length > 1 ? 2 : 1);
-const cutOf = () => { if (cur.hints < 2) return []; const left = cur.P.opts.map((_, j) => j).filter((j) => j !== cur.P.ans && !cur.wrong.includes(j)); return left.length > 1 ? left.slice(0, 1) : []; };
+const cutOf = () => { if (cur.hints < 2) return []; const left = cur.P.opts.map((_, j) => j).filter((j) => j !== cur.P.ans); return left.slice(0, -1); }; // 正解でない選び肢のうち最後の1つ以外を消す（まちがいの数で変えない。消した選び肢が戻らない）
 function paint() {
   const cut = cutOf();
   document.querySelectorAll(".ch").forEach((b) => { const j = +b.dataset.j, ng = cur.wrong.includes(j) || cut.includes(j); b.classList.toggle("ng", ng); b.disabled = ng || cur.done; b.setAttribute("aria-label", cur.P.opts[j] + (ng ? "（ちがう）" : "")); });
@@ -648,7 +649,7 @@ function choose(j) {
   $("hintbox").innerHTML = ""; $("msg").className = "msg"; $("msg").textContent = "";
   const te = P.te ? G.BYTE[P.te] : null;
   $("after").innerHTML = `<div class="verdict" role="status">
-    <span class="seal" aria-hidden="true">投<br>票</span>
+    <span class="seal" aria-hidden="true">著<br>作</span>
     <div class="hd">✓ 正解！ ${starStr(st)}</div>
     <p class="why"><b>解説：</b>${esc(P.why)}</p>
     ${te ? `<p class="te"><b>${te.icon} ${esc(te.name)}</b>：${esc(te.lead)}</p>` : ""}

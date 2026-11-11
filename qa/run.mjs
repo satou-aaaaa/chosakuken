@@ -100,7 +100,8 @@ check("README の URL のすぐ後ろに全角の字を続けない（Link check
 { const sw = readFileSync(path.join(root, "sw.js"), "utf8"), mf = JSON.parse(readFileSync(path.join(root, "manifest.webmanifest"), "utf8"));
   const shell = JSON.parse(sw.match(/SHELL = (\[[^\]]+\])/)[1]);
   check("PWA：sw.js は画面のファイルを全部保存し（引き継ぎの transfer.js も）、取り直して入れ、外へ何も送らない", ["./index.html", "./data.js", "./transfer.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"].every((f) => shell.includes(f)) && /cache: "reload"/.test(sw) && !/https?:\/\//.test(sw.replace(/^\/\/.*$/gm, "")));
-  check("PWA：manifest にアイコン2つと名前がある", mf.name === "著作権のきほん" && mf.icons.length >= 2 && mf.start_url === "./"); }
+  check("PWA：manifest にアイコン2つと名前がある", mf.name === "著作権のきほん" && mf.icons.length >= 2 && mf.start_url === "./");
+  check("PWA：maskable は専用のアイコン（ふつうのアイコンを使い回さない）・sw.js が保存する", mf.icons.some((i) => i.purpose === "maskable" && i.src === "icon-maskable-512.png") && !mf.icons.some((i) => i.purpose === "maskable" && /icon-(192|512)\.png/.test(i.src)) && shell.includes("./icon-maskable-512.png") && existsSync(path.join(root, "icon-maskable-512.png"))); }
 
 // ---- 3. ブラウザで遊ぶ ----
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".png": "image/png", ".webmanifest": "application/manifest+json" };
@@ -182,13 +183,21 @@ try {
   check("ヒント1は見るところを言う（選び肢は消さない）", (await p.textContent("#hintbox")).includes("💡") && await p.locator(".ch.ng").count() === 0);
   await p.click("#hint");
   check("ヒント2はまちがいの選び肢を1つ消す・ヒントは2回まで", await p.locator(".ch.ng").count() === 1 && await p.locator("#hint:disabled").count() === 1);
+  {
+    // しぼったあとに残ったまちがいを選んでも、消した選び肢は戻らない（shared-workflows incidents/2026-11-07-hint-cut-comes-back.md）
+    const cut1 = await p.$$eval(".ch.ng", (bs) => bs.map((b) => b.dataset.j));
+    const other = await p.evaluate((cut) => { const c = __mb.cur(); return c.P.opts.findIndex((_, j) => j !== c.P.ans && !cut.includes(String(j))); }, cut1);
+    if (other >= 0) await p.click(`.ch[data-j="${other}"]`);
+    const cut2 = await p.$$eval(".ch.ng", (bs) => bs.map((b) => b.dataset.j));
+    check("ヒント2で消した選び肢は、そのあとまちがえても戻らない", other >= 0 && cut1.every((j) => cut2.includes(j)) && cut2.length === 2, cut1 + "→" + cut2);
+  }
   await solve(p);
   check("ヒント2回は★1", (await p.getAttribute(".verdict .stars", "aria-label")) === "星1つ");
   await p.click("#next");
   await solve(p); await p.click("#next");
   await p.waitForTimeout(150);
   const s1 = await mem(p);
-  check("5問で結果：今日の記録に1問ごとのまちがい（1・0・0・2・0）", JSON.stringify(s1.days[TODAY]?.m) === "[1,0,0,2,0]");
+  check("5問で結果：今日の記録に1問ごとのまちがい（1・0・0・3・0。4問目はヒント2回＋しぼったあとのまちがい1回）", JSON.stringify(s1.days[TODAY]?.m) === "[1,0,0,3,0]");
   check("今日の記録に解いた問題の札も残す（あとで場面が増えても結果に元の問題を出す）", JSON.stringify(s1.days[TODAY]?.l) === JSON.stringify(tags));
   const share = await p.textContent(".share");
   check("シェアの文に問題・答えを出さない（印だけ）", /第\d+回/.test(share) && /🟢/.test(share) && !G.TE.some((t) => share.includes(t.name) || share.includes(t.lead)), share);
@@ -232,6 +241,35 @@ try {
   check("とことんはまちがえても終わらない", await p.locator(".verdict").count() === 0 && await p.locator(".ch").count() >= 2 && await p.locator("#quit").count() === 1);
   await p.click("#quit"); await p.waitForTimeout(150);
   check("「ここで降りる」で終わり、一度で正解した数（2問）が自己ベスト", (await mem(p)).ebest === 2 && (await p.textContent("#eres")).includes("2問"));
+  {
+    // 正解した直後でも「ここで降りる」が効く（kyuyo-meisai 1bebfdc）
+    const q = await newPage(); await closeHow(q); await q.click("#go-e");
+    await solve(q); await q.click("#quit"); await q.waitForTimeout(150);
+    check("とことんは正解した直後でも「ここで降りる」で終わり、その問題も数える", await q.locator("#eres").count() === 1 && (await q.textContent("#eres")).includes("1問"));
+    await q.context().close();
+  }
+  {
+    // 保存できないあいだは帯を出したまま・保存できたら消える（routines/game-dev.md「共通の形」の記録）
+    const q = await newPage(); await closeHow(q);
+    await q.evaluate(() => { window.__set = Storage.prototype.setItem; Storage.prototype.setItem = function () { throw new Error("full"); }; });
+    await q.click("#go-d"); await solve(q); await q.waitForTimeout(2600);
+    const on = await q.locator("#savewarn").count();
+    await q.evaluate(() => { Storage.prototype.setItem = window.__set; }); await q.click("#next"); await solve(q); await q.waitForTimeout(100);
+    check("保存できないあいだは帯 #savewarn が1つ出たまま（数秒後も）・保存できたら消える", on === 1 && await q.locator("#savewarn").count() === 0, on);
+    await q.context().close();
+  }
+  {
+    // ホームの題が縦に伸びない（incidents/2026-11-07-title-stretched.md）・星は role=img
+    const bad = [];
+    for (const [w, h] of [[820, 1180], [390, 844], [1280, 800]]) {
+      const c = await browser.newContext({ viewport: { width: w, height: h } }); const q = await newPage(w, c); await closeHow(q);
+      const r = await q.evaluate(() => { const t = document.querySelector("h1.title"); const h0 = t.getBoundingClientRect().height; t.style.flex = "none"; const h1 = t.getBoundingClientRect().height; t.style.flex = ""; return [h0, h1, getComputedStyle(t).flexGrow]; });
+      if (Math.abs(r[0] - r[1]) > 1 || r[2] !== "0") bad.push(`${w}×${h} ${r.join("/")}`);
+      await c.close();
+    }
+    check("ホームの題（h1.title）が縦に伸びない（flex:none）", bad.length === 0, bad.join(" "));
+    check("星は role=img と aria-label・取れなかった星は ☆", /class="stars" role="img" aria-label="星\$\{s\}つ"/.test(html) && /"☆"\.repeat/.test(html));
+  }
   {
     // 古いタブで終えた回を、別のタブがもう一度終えても書き戻さない
     const q = await newPage(); await closeHow(q);
