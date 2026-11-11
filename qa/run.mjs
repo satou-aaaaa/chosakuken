@@ -384,7 +384,7 @@ try {
     const m0 = await mem(b), id = m0.runs.e?.id;
     await a.click("#quit"); await a.waitForTimeout(150);
     const s = await mem(a);
-    check("同じ回を別のタブで先へ進めたら、古いタブの「ここで降りる」はその回を終えない", !!id && s.runs.e?.id === id && s.runs.e.res.length === 1 && !s.edone.includes(id) && s.ebest === m0.ebest, `${id}/${s.runs.e?.id}/${s.edone}/${m0.ebest}/${s.ebest}`);
+    check("同じ回を別のタブで先へ進めたら、古いタブの「ここで降りる」はその回を終えない", !!id && s.runs.e?.id === id && s.runs.e.res.length === 1 && !s.edone.includes(id) && s.ebest === m0.ebest && (await a.locator("#eres").count()) === 0, `${id}/${s.runs.e?.id}/${s.edone}/${m0.ebest}/${s.ebest}`);
     await ctx.close();
   }
   {
@@ -397,7 +397,20 @@ try {
     const m0 = await mem(b), id = m0.runs.e?.id;
     await a.click("#quit"); await a.waitForTimeout(150);
     const s = await mem(a);
-    check("別のタブで次の問題のヒントを使ったら、古いタブの「ここで降りる」はその回を終えない", !!id && m0.runs.e?.cur?.i === 1 && s.runs.e?.id === id && s.runs.e.cur?.hints === 1 && !s.edone.includes(id) && s.ebest === m0.ebest, `${id}/${JSON.stringify(m0.runs.e?.cur)}/${JSON.stringify(s.runs.e?.cur)}`);
+    check("別のタブで次の問題のヒントを使ったら、古いタブの「ここで降りる」はその回を終えない", !!id && m0.runs.e?.cur?.i === 1 && s.runs.e?.id === id && s.runs.e.cur?.hints === 1 && !s.edone.includes(id) && s.ebest === m0.ebest && (await a.locator("#eres").count()) === 0, `${id}/${JSON.stringify(m0.runs.e?.cur)}/${JSON.stringify(s.runs.e?.cur)}`);
+    await ctx.close();
+  }
+
+  {
+    // 古いタブで1問目に正解した直後、別のタブで2問目を開いただけでも、古いタブの「ここで降りる」は終えない
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 800 } });
+    const a = await newPage(390, ctx); await closeHow(a); await a.click("#go-e");
+    await solve(a); await a.waitForTimeout(100);
+    const b = await ctx.newPage(); b.on("pageerror", (e) => errors.push(e.message)); await b.goto(url); await b.waitForTimeout(150); await b.click("#go-e"); await b.waitForTimeout(100);
+    const m0 = await mem(b), id = m0.runs.e?.id;
+    await a.click("#quit"); await a.waitForTimeout(150);
+    const s = await mem(a);
+    check("別のタブで次の問題を開いただけでも、古いタブの「ここで降りる」はその回を終えない", !!id && m0.runs.e?.cur?.i === 1 && s.runs.e?.id === id && !s.edone.includes(id) && (await a.locator("#eres").count()) === 0, `${id}/${JSON.stringify(m0.runs.e?.cur)}/${s.runs.e?.id}`);
     await ctx.close();
   }
 
