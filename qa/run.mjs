@@ -69,8 +69,8 @@ const len = (s) => [...String(s)].length;
   check("今日の5問（重ねない）と上級（今日と重ねない上級の場面3つ）を3年分作れる", bad.length === 0, bad.slice(0, 5).join(","));
   check("2週間のうちに場面が50以上出る・前の日と同じ組の日が無い", cover.size >= 50 && sameAsPrev === 0, `${cover.size}・${sameAsPrev}`);
   const seen = []; let rep = 0;
-  for (let i = 0; i < 365; i++) { const d = new Date(d0 + i * 864e5).toISOString().slice(0, 10), a = G.dailyTags(d).filter((t) => t[0] === "q"); for (const t of a) { if (seen.slice(-40).includes(t)) rep++; } seen.push(...a); }
-  check("場面は10日のうちに同じものが戻らない", rep === 0, rep);
+  for (let i = 0; i < 365; i++) { const d = new Date(d0 + i * 864e5).toISOString().slice(0, 10), a = G.dailyTags(d).filter((t) => t[0] === "q"); for (const t of a) { if (seen.slice(-45).includes(t)) rep++; } seen.push(...a); }
+  check("場面は10日のうちに同じものが戻らない（前の9日分45問と比べる）", rep === 0, rep);
 }
 
 // ---- 2. ファイルの中身 ----
@@ -84,6 +84,9 @@ check("乱数は sort の比較の中で引かない（ブラウザで引く回�
 check("一行の式の途中にコメント // を足さない（行の残りが消える。rosen-hitofude 2026-11-04）", !/;\s*\/\/[^\n]*;\s*\w/.test(data.split("\n").filter((l) => !l.trim().startsWith("//")).join("\n")));
 check("法律相談にしない・争いのある場面は入れないと「このゲームについて」と README に書く", /法律相談ではありません/.test(html) && /法律相談ではありません/.test(readme) && !/スクショを投稿してよい|二次創作してよい/.test(data));
 check("違法なダウンロード・アップロードを勧めない（「違法にならない」場面を出さない）", !/違法にならない|ばれない|ばれなければ/.test(html + data));
+check("写してきたゲーム（選挙のしくみ）の言葉が画面に残っていない（2026-11-11 札の見出し「せんきょ」・判の「投票」が残った）", !/せんきょ|選挙|投票|しくみ帳/.test(html + data));
+{ const hp = (f) => (readFileSync(path.join(root, ".github/workflows", f), "utf8").match(/hold_paths:\s*'([^']*)'/) || [])[1];
+  check("差し戻し（post-deploy）も自動マージ（automerge）と同じファイルを人に回す（hold_paths が同じ）", hp("automerge.yml") && hp("automerge.yml") === hp("post-deploy.yml"), hp("post-deploy.yml")); }
 check("チケット・回数制限・🔒で開くモードを入れない（好きなだけ遊べる）", !/🎫|チケット|🔒|すると開く|あとで開く|スタミナ|回復まで/.test(html));
 check("画面にお笑いの言葉を入れない（本物っぽく）", !/お笑い|ギャグ|ツッコミ|なんでやねん|（うそ）|ｗｗ/.test(html + data));
 check("実在の会社名・人名・ブランドを出さない（人物は名字＋年代だけ）", !/株式会社|有限会社|Amazon|楽天|メルカリ|LINEヤフー/.test(data));
