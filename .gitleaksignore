@@ -1,0 +1,5 @@
+# 誤検知：記録のキーの名前 "chosakuken-v1"（localStorage のキー。秘密ではない）を generic-api-key と読んだ。
+# 次のコミットでキーを "chosaku-v1" に替えた（公開前なので記録の移しは要らない）。最初のコミットの3か所だけを許す。
+5a069744fe392a3ea26a8e1460587e770f2c63f9:qa/run.mjs:generic-api-key:90
+5a069744fe392a3ea26a8e1460587e770f2c63f9:index.html:generic-api-key:327
+5a069744fe392a3ea26a8e1460587e770f2c63f9:index.html:generic-api-key:348
