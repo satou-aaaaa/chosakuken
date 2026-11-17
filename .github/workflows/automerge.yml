@@ -37,4 +37,4 @@ jobs:
       # （GITHUB_TOKEN のマージでは main の push で動かないため。Setup check を起こさないと、月1の失敗の Issue が次の月まで閉じない。#252 の CodeRabbit）
       recheck_main: false
       # Link check も起こす（GITHUB_TOKEN のマージでは main の push で動かず、直したリンクが次の週まで赤のまま。版11の CodeRabbit）
-      dispatch: qa.yml setup-check.yml link-check.yml
+      dispatch: qa.yml setup-check.yml link-check.yml secret-scan.yml
