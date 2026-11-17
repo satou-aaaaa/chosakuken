@@ -489,6 +489,13 @@ try {
     check("キーボードだけで選んで答えられる", await q.locator(".verdict").count() === 1);
     await q.context().close();
   }
+  // 知らせ（.toast）が出ているあいだも、その下のボタンを押せる（2026-11-17 全ゲームの点検。pointer-events:none）
+  {
+    const q = await newPage(); await closeHow(q);
+    const r = await q.evaluate(() => { const d = document.createElement("div"); d.className = "toast"; d.textContent = "知らせ"; document.body.appendChild(d); const b = d.getBoundingClientRect(), el = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); const v = [getComputedStyle(d).pointerEvents, !!el && !d.contains(el)]; d.remove(); return v; });
+    check("知らせ（.toast）は押しても下のボタンに届く（pointer-events:none）", r[0] === "none" && r[1], r.join(","));
+    await q.context().close();
+  }
 } catch (e) { check("ブラウザでの検査が最後まで動く", false, e.stack.split("\n").slice(0, 3).join(" ")); }
 
 // 引き継ぎコード（shared-workflows template/qa/transfer-check.mjs）
